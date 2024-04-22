@@ -1,11 +1,14 @@
 import javafx.scene.paint.Color;
 
+
 public class Block {
 
-    BlockType type;
-    int size;
-    boolean[][] shape;
-    Color color;
+    private BlockType type;
+    private int size;
+    private boolean[][] shape;
+    private Color color;
+    private int anchorX;
+    private int anchorY;
     Block(BlockType type)
     {
         this.type = type;
@@ -34,6 +37,23 @@ public class Block {
         System.out.println("rotated");
     }
 
+    public void move(Direction direction)
+    {
+
+    }
+//    public boolean doesBlockFit(Direction direction)
+//    {
+//        for (int i = 0; i < size; i++) {
+//            for (int j = 0; j < size; j++) {
+//                int row = getAnchorY() + i + direction.y;
+//                int column = getAnchorX() + j + direction.x;
+//                if(row >= 0 && row < board.length && column >= 0 && column < board[i].length && board[row][column] == State.STATIC)
+//                    return false;
+//            }
+//        }
+//        return true;
+//    }
+
     boolean[][] copy2dArray(boolean[][] arr)
     {
         boolean[][] copy = new boolean[arr.length][];
@@ -42,4 +62,31 @@ public class Block {
         return copy;
     }
 
+    public int getAnchorX() {
+        return anchorX;
+    }
+
+    public void setAnchorX(int anchorX) {
+        this.anchorX = anchorX;
+    }
+
+    public int getAnchorY() {
+        return anchorY;
+    }
+
+    public void setAnchorY(int anchorY) {
+        this.anchorY = anchorY;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public boolean[][] getShape() {
+        return shape;
+    }
+
+    public Color getColor() {
+        return color;
+    }
 }

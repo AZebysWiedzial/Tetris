@@ -1,3 +1,4 @@
+import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -11,63 +12,129 @@ public class Main extends Application {
         launch(args);
     }
 
+    public BlockType currentBlockType;
+    public Block currentBlock;
+    public final int CELLS_HORIZONTAL = 10;
+    public final int CELLS_VERTICAL = 20;
+    public int frameCount = 0;
+    public State[][] board;
+
     @Override
     public void start(Stage primaryStage) throws Exception {
-//        int[][] board = new int[20][10];
-//        print(board);
+        board = prepareBoard();
 
-        Block block = new Block(BlockType.LBlock);
-        print(block.shape);
+        currentBlockType = drawNextBlock();
+        placeNewBlock();
+        printBoard();
 
-        block.rotate(true);
-        print(block.shape);
+        moveCurrentBlock(Direction.Left);
+        printBoard();
 
-        Timeline gameloop = new Timeline(new KeyFrame(Duration.millis(1000), event -> {
+        moveCurrentBlock(Direction.Down);
+        printBoard();
 
+        moveCurrentBlock(Direction.Right);
+        printBoard();
+
+
+
+        Timeline gameloop = new Timeline(new KeyFrame(Duration.millis(1000/60), event -> {
+            if (frameCount >= 60)
+            {
+                moveCurrentBlock(Direction.Down);
+                printBoard();
+                frameCount = 0;
+            }
+
+            frameCount++;
         }));
+        gameloop.setCycleCount(Animation.INDEFINITE);
+        gameloop.play();
     }
-    public void print(int[][] board)
+    public State[][] prepareBoard()
     {
+        State[][] board = new State[CELLS_VERTICAL][CELLS_HORIZONTAL];
         for (int i = 0; i < board.length; i++) {
-            System.out.println(Arrays.toString(board[i]));
+            Arrays.fill(board[i], State.EMPTY);
         }
-        System.out.println();
+        return board;
     }
-    public void print(boolean[][] board)
+    public void printBoard()
     {
         for (int i = 0; i < board.length; i++) {
             System.out.print("[");
             for (int j = 0; j < board[i].length; j++) {
-                if(board[i][j]) System.out.print("1");
-                else System.out.print("0");
-                if(j < board.length - 1) System.out.print(", ");
+                switch (board[i][j])
+                {
+                    case EMPTY:
+                        System.out.print(0);
+                        break;
+                    case MOVING:
+                        System.out.print(1);
+                        break;
+                    case STATIC:
+                        System.out.print(2);
+                        break;
+                }
+                if(j < board[i].length - 1) System.out.print(", ");
             }
             System.out.println("]");
         }
         System.out.println();
     }
-
-    public void rotateArr(boolean[][] arr, boolean rightRotation)
+    public void placeNewBlock()
     {
-        boolean[][] copy = new boolean[arr.length][];
-        for (int i = 0; i < arr.length; i++)
-            copy[i] = arr[i].clone();
-
-
-
-        int step = 1;
-        int startJ = 0;
-        int startI = arr.length - 1;
-
-        if(rightRotation){
-           startJ = arr.length - 1;
-           startI = 0;
-           step = -1;
+        currentBlock = new Block(currentBlockType);
+        currentBlock.setAnchorY(0);
+        currentBlock.setAnchorX((board[0].length - currentBlock.getSize()) / 2);
+        if(!doesBlockFit(Direction.Still))
+        {
+            System.out.println("cannot place new block");
+            return;
         }
-        for (int i = 0; i < arr.length; i++) {
-            for (int j = 0; j < arr.length; j++) {
-                arr[i][j] = copy[startJ + j * step][startI - i * step];
+        int blockSize = currentBlock.getSize();
+        int startColumn = (board[0].length - blockSize) / 2;
+        for (int i = 0; i < blockSize; i++) {
+            for (int j = 0; j < blockSize; j++) {
+                if(currentBlock.getShape()[i][j]) board[i][startColumn + j] = State.MOVING;
             }
         }
+    }
+    public void moveCurrentBlock(Direction direction)
+    {
+        if(!doesBlockFit(direction))
+        {
+            System.out.println("cannot move the block");
+            return;
+        }
+        for (int i = 0; i < currentBlock.getSize(); i++) {
+            for (int j = 0; j < currentBlock.getSize(); j++) {
+                if(currentBlock.getShape()[i][j]) board[currentBlock.getAnchorY() + i][currentBlock.getAnchorX() + j] = State.EMPTY;
+            }
+        }
+
+        for (int i = 0; i < currentBlock.getSize(); i++) {
+            for (int j = 0; j < currentBlock.getSize(); j++) {
+                if(currentBlock.getShape()[i][j]) board[currentBlock.getAnchorY() + i + direction.y][currentBlock.getAnchorX() + j + direction.x] = State.MOVING;
+            }
+        }
+        currentBlock.setAnchorX(currentBlock.getAnchorX() + direction.x);
+        currentBlock.setAnchorY(currentBlock.getAnchorY() + direction.y);
+    }
+    public boolean doesBlockFit(Direction direction)
+    {
+        for (int i = 0; i < currentBlockType.size; i++) {
+            for (int j = 0; j < currentBlockType.size; j++) {
+                int row = currentBlock.getAnchorY() + i + direction.y;
+                int column = currentBlock.getAnchorX() + j + direction.x;
+                if(row >= 0 && row < board.length && column >= 0 && column < board[i].length && board[row][column] == State.STATIC)
+                    return false;
+            }
+        }
+        return true;
+    }
+    public BlockType drawNextBlock()
+    {
+        return BlockType.values()[(int)(Math.random() * BlockType.values().length)];
     }
 }
