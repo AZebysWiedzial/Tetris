@@ -1,11 +1,12 @@
 import javafx.scene.paint.Color;
 
 public enum BlockType {
-        OBlock(4, Color.SANDYBROWN, new boolean[][]{
+        OBlock(2, Color.SANDYBROWN, new boolean[][]{
                 {false, false, false, false},
                 {false, true, true, false},
                 {false, true, true, false},
-                {false, false, false, false},}),
+                {false, false, false, false}
+        }),
         IBlock(4, Color.LIGHTBLUE, new boolean[][]{
                 {false, false, false, false},
                 {true, true, true, true},
@@ -34,7 +35,7 @@ public enum BlockType {
         }),
         ZBlock(3, Color.RED, new boolean[][]{
                 {true, true, false},
-                {true, true, false},
+                {false, true, true},
                 {false, false, false}
         });
 

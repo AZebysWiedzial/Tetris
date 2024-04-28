@@ -2,6 +2,11 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -12,37 +17,79 @@ public class Main extends Application {
         launch(args);
     }
 
-    public BlockType currentBlockType;
-    public Block currentBlock;
     public final int CELLS_HORIZONTAL = 10;
     public final int CELLS_VERTICAL = 20;
+    public final int CELL_SIZE = 20;
+    public final int SCENE_WIDTH = 800;
+    public final int SCENE_HEIGHT = 600;
+    public AnchorPane root;
+    public GridPane visualBoard;
+    public BlockType currentBlockType;
+    public Block currentBlock;
     public int frameCount = 0;
     public State[][] board;
+    public Rectangle[][] rectangleBoard;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        board = prepareBoard();
+        root = new AnchorPane();
+        Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
+
+        visualBoard = new GridPane();
+        visualBoard.setLayoutX((SCENE_WIDTH - CELLS_HORIZONTAL * CELL_SIZE) / 2);
+        visualBoard.setLayoutY((SCENE_HEIGHT - CELLS_VERTICAL * CELL_SIZE) / 3);
+        root.getChildren().add(visualBoard);
+
+        prepareBoards();
 
         currentBlockType = drawNextBlock();
         placeNewBlock();
         printBoard();
 
-        moveCurrentBlock(Direction.Left);
-        printBoard();
+        primaryStage.setScene(scene);
+        primaryStage.show();
 
-        moveCurrentBlock(Direction.Down);
-        printBoard();
-
-        moveCurrentBlock(Direction.Right);
-        printBoard();
-
+        scene.setOnKeyPressed(event -> {
+            switch (event.getCode())
+            {
+                case LEFT:
+                    currentBlock.move(Direction.Left);
+                    break;
+                case RIGHT:
+                    currentBlock.move(Direction.Right);
+                    break;
+                case DOWN:
+                    currentBlock.move(Direction.Down);
+                    break;
+                case SPACE:
+                    currentBlock.hardDrop();
+                    break;
+                case R:
+                    currentBlock.rotate(true);
+            }
+        });
 
 
         Timeline gameloop = new Timeline(new KeyFrame(Duration.millis(1000/60), event -> {
-            if (frameCount >= 60)
+            if(frameCount % 20 == 0)
             {
-                moveCurrentBlock(Direction.Down);
+                adjustForEmptyRows();
                 printBoard();
+            }
+            if (frameCount % 60 == 0)
+            {
+                if(currentBlock.doesMovedBlockFit(Direction.Down))
+                {
+                    currentBlock.move(Direction.Down);
+                }
+                else {
+                    currentBlock.setBlockAreaToState(State.STATIC);
+                    currentBlockType = drawNextBlock();
+                    placeNewBlock();
+                }
+
+                deleteFullRows();
+
                 frameCount = 0;
             }
 
@@ -51,13 +98,44 @@ public class Main extends Application {
         gameloop.setCycleCount(Animation.INDEFINITE);
         gameloop.play();
     }
-    public State[][] prepareBoard()
+
+    public void adjustForEmptyRows()
     {
-        State[][] board = new State[CELLS_VERTICAL][CELLS_HORIZONTAL];
+        for (int i = board.length - 2; i >= 0; i--) {
+            if(!isWholeRowInTheSameState(i + 1, State.EMPTY)) continue;
+
+            for (int j = 0; j < board[i].length; j++)
+            {
+                if(board[i][j] == State.STATIC)
+                {
+                    board[i][j] = State.EMPTY;
+                    board[i + 1][j] = State.STATIC;
+                }
+            }
+        }
+    }
+
+    public void deleteFullRows()
+    {
+        for (int i = 0; i < board.length; i++) {
+            if(isWholeRowInTheSameState(i, State.STATIC)) Arrays.fill(board[i], State.EMPTY);
+        }
+    }
+
+    public void prepareBoards()
+    {
+        visualBoard.getChildren().clear();
+        board = new State[CELLS_VERTICAL][CELLS_HORIZONTAL];
+        rectangleBoard = new Rectangle[CELLS_VERTICAL][CELLS_HORIZONTAL];
+
         for (int i = 0; i < board.length; i++) {
             Arrays.fill(board[i], State.EMPTY);
+            for (int j = 0; j < board[i].length; j++) {
+                Rectangle rectangle = new Rectangle(CELL_SIZE, CELL_SIZE, Color.BLACK);
+                rectangleBoard[i][j] = rectangle;
+                visualBoard.add(rectangle, j, i);
+            }
         }
-        return board;
     }
     public void printBoard()
     {
@@ -84,57 +162,32 @@ public class Main extends Application {
     }
     public void placeNewBlock()
     {
-        currentBlock = new Block(currentBlockType);
+        currentBlock = new Block(currentBlockType, board, rectangleBoard);
         currentBlock.setAnchorY(0);
         currentBlock.setAnchorX((board[0].length - currentBlock.getSize()) / 2);
-        if(!doesBlockFit(Direction.Still))
+        if(!currentBlock.doesMovedBlockFit(Direction.Still))
         {
-            System.out.println("cannot place new block");
+            gameOver();
             return;
         }
-        int blockSize = currentBlock.getSize();
-        int startColumn = (board[0].length - blockSize) / 2;
-        for (int i = 0; i < blockSize; i++) {
-            for (int j = 0; j < blockSize; j++) {
-                if(currentBlock.getShape()[i][j]) board[i][startColumn + j] = State.MOVING;
-            }
-        }
+        currentBlock.setBlockAreaToState(State.MOVING);
     }
-    public void moveCurrentBlock(Direction direction)
-    {
-        if(!doesBlockFit(direction))
-        {
-            System.out.println("cannot move the block");
-            return;
-        }
-        for (int i = 0; i < currentBlock.getSize(); i++) {
-            for (int j = 0; j < currentBlock.getSize(); j++) {
-                if(currentBlock.getShape()[i][j]) board[currentBlock.getAnchorY() + i][currentBlock.getAnchorX() + j] = State.EMPTY;
-            }
-        }
 
-        for (int i = 0; i < currentBlock.getSize(); i++) {
-            for (int j = 0; j < currentBlock.getSize(); j++) {
-                if(currentBlock.getShape()[i][j]) board[currentBlock.getAnchorY() + i + direction.y][currentBlock.getAnchorX() + j + direction.x] = State.MOVING;
-            }
-        }
-        currentBlock.setAnchorX(currentBlock.getAnchorX() + direction.x);
-        currentBlock.setAnchorY(currentBlock.getAnchorY() + direction.y);
-    }
-    public boolean doesBlockFit(Direction direction)
+    private void gameOver()
     {
-        for (int i = 0; i < currentBlockType.size; i++) {
-            for (int j = 0; j < currentBlockType.size; j++) {
-                int row = currentBlock.getAnchorY() + i + direction.y;
-                int column = currentBlock.getAnchorX() + j + direction.x;
-                if(row >= 0 && row < board.length && column >= 0 && column < board[i].length && board[row][column] == State.STATIC)
-                    return false;
-            }
-        }
-        return true;
+
     }
+
     public BlockType drawNextBlock()
     {
         return BlockType.values()[(int)(Math.random() * BlockType.values().length)];
+    }
+    public boolean isWholeRowInTheSameState(int row, State state)
+    {
+        for (int i = 0; i < board[row].length; i++)
+        {
+            if(board[row][i] != state) return false;
+        }
+        return true;
     }
 }
