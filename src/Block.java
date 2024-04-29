@@ -40,18 +40,24 @@ public class Block {
         anchorY += direction.y;
         setBlockAreaToState(State.MOVING);
     }
-    public void hardDrop()
+    public int hardDrop()
     {
+        int moves = 0;
         while(doesMovedBlockFit(Direction.Down))
+        {
             move(Direction.Down);
+            moves++;
+        }
+        setBlockAreaToState(State.STATIC);
+
+        return moves;
     }
 
     public boolean doesMovedBlockFit(Direction direction)
     {
         for (int i = 0; i < size; i++) {
-            if(isWholeRowFalse(i)) continue;
             for (int j = 0; j < size; j++) {
-                if(isWholeColumnFalse(j)) continue;
+                if(!shape[i][j]) continue;
                 int row = anchorY + i + direction.y;
                 int column = anchorX + j + direction.x;
                 if(row < 0 || row >= board.length || column < 0 || column >= board[i].length || board[row][column] == State.STATIC)
@@ -104,21 +110,6 @@ public class Block {
         for (int i = 0; i < arr.length; i++)
             copy[i] = arr[i].clone();
         return copy;
-    }
-    boolean isWholeRowFalse(int row)
-    {
-        for (int i = 0; i < size; i++) {
-            if(shape[row][i]) return false;
-        }
-        return true;
-    }
-
-    boolean isWholeColumnFalse(int column)
-    {
-        for (int i = 0; i < size; i++) {
-            if(shape[i][column]) return false;
-        }
-        return true;
     }
 
     public int getAnchorX() {

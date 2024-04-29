@@ -1,13 +1,13 @@
 import javafx.scene.paint.Color;
 
 public enum BlockType {
-        OBlock(2, Color.SANDYBROWN, new boolean[][]{
+        OBlock(2, Color.YELLOW, new boolean[][]{
                 {false, false, false, false},
                 {false, true, true, false},
                 {false, true, true, false},
                 {false, false, false, false}
         }),
-        IBlock(4, Color.LIGHTBLUE, new boolean[][]{
+        IBlock(4, Color.DEEPSKYBLUE, new boolean[][]{
                 {false, false, false, false},
                 {true, true, true, true},
                 {false, false, false, false},
@@ -23,12 +23,12 @@ public enum BlockType {
                 {true, true, true},
                 {false, false, false}
         }),
-        TBlock(3, Color.PURPLE, new boolean[][]{
+        TBlock(3, Color.DARKMAGENTA, new boolean[][]{
                 {false, true, false},
                 {true, true, true},
                 {false, false, false}
         }),
-        SBlock(3, Color.LIGHTGREEN, new boolean[][]{
+        SBlock(3, Color.FORESTGREEN, new boolean[][]{
                 {false, true, true},
                 {true, true, false},
                 {false, false, false}
@@ -49,4 +49,3 @@ public enum BlockType {
                 this.shape = shape;
         }
     }
-
