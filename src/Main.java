@@ -3,7 +3,9 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
@@ -28,7 +30,7 @@ public class Main extends Application {
     public final int SCENE_HEIGHT = 600;
     public final int STROKE_WIDTH = 2;
     public final int FONT_SIZE = 15;
-    public final int BLOCKS_TO_PREDICT = 3;
+    public final int BLOCKS_TO_PREDICT = 5;
     public final int POINTS_PER_COMBO = 50;
     public final int POINTS_PER_SOFT_DROP = 1;
     public final int POINTS_PER_HARD_DROP = 2;
@@ -49,9 +51,13 @@ public class Main extends Application {
     public State[][] board;
     public Rectangle[][] rectangleBoard;
 
+    VBox visualNextBlocks;
+    Group visualHeldBlock;
+    VBox block;
     Text txtScoreNum = new Text("0");
     Text txtTimeNum = new Text("0");
     Text txtLinesNum = new Text("0");
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         root = new AnchorPane();
@@ -64,8 +70,14 @@ public class Main extends Application {
         visualBoard.setStyle("-fx-border-color: white; -fx-border-width: " + STROKE_WIDTH + "px;");
 
         nextBlocks = new BlockType[BLOCKS_TO_PREDICT];
-        for (int i = 0; i < BLOCKS_TO_PREDICT; i++) {
-            nextBlocks[i] = pickRandomBlockType();
+        nextBlocks[0] = pickRandomBlockType();
+        for (int i = 1; i < BLOCKS_TO_PREDICT; i++) {
+            BlockType nextBlock;
+            do {
+                nextBlock = pickRandomBlockType();
+            }
+            while (nextBlock == nextBlocks[i - 1]);
+            nextBlocks[i] = nextBlock;
         }
 
         prepareBoards();
@@ -74,8 +86,8 @@ public class Main extends Application {
         VBox statistics = new VBox(10);
         statistics.setAlignment(Pos.CENTER);
         statistics.setStyle("-fx-padding: 10px; -fx-border-color: white; -fx-border-width: " + STROKE_WIDTH + "px;");
-        statistics.setLayoutX(20);
-        statistics.setLayoutY(100);
+        statistics.setLayoutX(50);
+        statistics.setLayoutY(350);
 
         Text txtScore = new Text("SCORE:");
         txtScore.setFont(Font.font(FONT_SIZE));
@@ -98,12 +110,43 @@ public class Main extends Application {
 
         statistics.getChildren().addAll(txtScore, txtScoreNum, txtLines, txtLinesNum, txtTime, txtTimeNum);
 
+        block = new VBox(10);
+        visualHeldBlock = new Group();
+        block.getChildren().add(visualHeldBlock);
+        block.setLayoutX(110);
+        block.setLayoutY(110);
 
 
 
-        root.getChildren().addAll(visualBoard, statistics);
+        Rectangle heldBlockOverlay = new Rectangle(100, 100, 100, 100);
+        heldBlockOverlay.setStroke(COLOR);
+        heldBlockOverlay.setStrokeWidth(STROKE_WIDTH);
+
+        Text txtHold = new Text("HOLD:");
+        txtHold.setLayoutX(115);
+        txtHold.setLayoutY(80);
+        txtHold.setFont(Font.font(FONT_SIZE * 1.5));
+        txtHold.setFill(COLOR);
+
+        visualNextBlocks = new VBox(10);
+        visualNextBlocks.setAlignment(Pos.CENTER);
+        visualNextBlocks.setStyle("-fx-padding: 10px; -fx-border-color: white; -fx-border-width: " + STROKE_WIDTH + "px;");
+        visualNextBlocks.setLayoutX(600);
+        visualNextBlocks.setLayoutY(200);
+
+        Text txtNext = new Text("NEXT:");
+        txtNext.setLayoutX(visualNextBlocks.getLayoutX() + 15);
+        txtNext.setLayoutY(visualNextBlocks.getLayoutY() - 20);
+        txtNext.setFont(Font.font(FONT_SIZE * 1.5));
+        txtNext.setFill(COLOR);
+
+        for (int i = 0; i < BLOCKS_TO_PREDICT; i++) {
+            Group visualBlock = createVisualBlock(nextBlocks[i]);
+            visualNextBlocks.getChildren().add(visualBlock);
+        }
 
 
+        root.getChildren().addAll(visualBoard, statistics, visualNextBlocks, txtNext, heldBlockOverlay, visualHeldBlock, txtHold);
 
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -112,36 +155,35 @@ public class Main extends Application {
         placeNewBlock();
 
         scene.setOnKeyPressed(event -> {
-            switch (event.getCode())
-            {
-                case LEFT:
-                    currentBlock.move(Direction.Left);
-                    break;
-                case RIGHT:
-                    currentBlock.move(Direction.Right);
-                    break;
-                case DOWN:
-                    currentBlock.move(Direction.Down);
-                    score += POINTS_PER_SOFT_DROP;
-                    updateScore();
-                    break;
-                case SPACE:
-                    int tilesMovedDown = currentBlock.hardDrop();
-                    score += tilesMovedDown * POINTS_PER_HARD_DROP;
-                    updateScore();
+            if(event.getCode() == KeyCode.ESCAPE) isInGame = !isInGame;
+            if(isInGame) {
+                switch (event.getCode()) {
+                    case LEFT:
+                        currentBlock.move(Direction.Left);
+                        break;
+                    case RIGHT:
+                        currentBlock.move(Direction.Right);
+                        break;
+                    case DOWN:
+                        currentBlock.move(Direction.Down);
+                        score += POINTS_PER_SOFT_DROP;
+                        updateScore();
+                        break;
+                    case SPACE:
+                        int tilesMovedDown = currentBlock.hardDrop();
+                        score += tilesMovedDown * POINTS_PER_HARD_DROP;
+                        updateScore();
 
-                    deleteFullRows();
-                    placeNewBlock();
-                    break;
-                case R:
-                    currentBlock.rotate(true);
-                    break;
-                case C:
-                    switchHeldBlock();
-                    break;
-                case ESCAPE:
-                    isInGame = !isInGame;
-                    break;
+                        deleteFullRows();
+                        placeNewBlock();
+                        break;
+                    case R:
+                        currentBlock.rotate(true);
+                        break;
+                    case C:
+                        switchHeldBlock();
+                        break;
+                }
             }
         });
 
@@ -181,9 +223,27 @@ public class Main extends Application {
 
     public void switchHeldBlock()
     {
+        if(hasSwitchedBlock) return;
+        currentBlock.setBlockAreaToState(State.EMPTY);
+        if(heldBlock == null)
+        {
+            heldBlock = currentBlock.getType();
+            placeNewBlock();
+        }
+        else
+        {
+            BlockType temp = currentBlock.getType();
 
+            placeNewBlock(heldBlock);
+            heldBlock = temp;
+        }
+        block.getChildren().remove(visualHeldBlock);
+        visualHeldBlock = createVisualBlock(heldBlock);
+        block.getChildren().add(visualHeldBlock);
+
+        hasSwitchedBlock = true;
     }
-
+    //TODO: Create a ghost block that shows where current block will land after a hard drop
     public void adjustForEmptyRows()
     {
         for (int i = board.length - 2; i >= 0; i--) {
@@ -280,6 +340,20 @@ public class Main extends Application {
             return;
         }
         currentBlock.setBlockAreaToState(State.MOVING);
+        hasSwitchedBlock = false;
+    }
+
+    public void placeNewBlock(BlockType type)
+    {
+        currentBlock = new Block(type, board, rectangleBoard);
+        currentBlock.setAnchorY(0);
+        currentBlock.setAnchorX((board[0].length - currentBlock.getSize()) / 2);
+        if(!currentBlock.doesMovedBlockFit(Direction.Still))
+        {
+            gameOver();
+            return;
+        }
+        currentBlock.setBlockAreaToState(State.MOVING);
     }
 
     private void gameOver()
@@ -292,10 +366,18 @@ public class Main extends Application {
     public BlockType drawNextBlock()
     {
         BlockType nextBlock = nextBlocks[0];
+        visualNextBlocks.getChildren().remove(0);
         for (int i = 0; i < nextBlocks.length - 1; i++) {
             nextBlocks[i] = nextBlocks[i + 1];
         }
-        nextBlocks[nextBlocks.length - 1] = pickRandomBlockType();
+        BlockType newBlock;
+        do
+        {
+            newBlock = pickRandomBlockType();
+        }
+        while(newBlock == nextBlocks[nextBlocks.length - 2]);
+        nextBlocks[nextBlocks.length - 1] = newBlock;
+        visualNextBlocks.getChildren().add(createVisualBlock(newBlock));
 
         return nextBlock;
     }
@@ -311,6 +393,22 @@ public class Main extends Application {
             if(board[row][i] != state) return false;
         }
         return true;
+    }
+    public Group createVisualBlock(BlockType blockType)
+    {
+        Group block = new Group();
+        for (int i = 0; i < blockType.size; i++) {
+            for (int j = 0; j < blockType.size; j++) {
+                if(!blockType.shape[i][j]) continue;
+
+                Rectangle rectangle = new Rectangle(CELL_SIZE, CELL_SIZE, blockType.color);
+                rectangle.setX(CELL_SIZE * j);
+                rectangle.setY(CELL_SIZE * i);
+
+                block.getChildren().add(rectangle);
+            }
+        }
+        return block;
     }
     public void updateScore()
     {

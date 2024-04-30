@@ -1,7 +1,7 @@
 import javafx.scene.paint.Color;
 
 public enum BlockType {
-        OBlock(2, Color.YELLOW, new boolean[][]{
+        OBlock(4, Color.YELLOW, new boolean[][]{
                 {false, false, false, false},
                 {false, true, true, false},
                 {false, true, true, false},
@@ -48,4 +48,5 @@ public enum BlockType {
                 this.color = color;
                 this.shape = shape;
         }
-    }
+
+}

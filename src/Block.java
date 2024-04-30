@@ -5,8 +5,8 @@ import javafx.scene.shape.Rectangle;
 public class Block {
 
     private final BlockType type;
-    private State[][] board;
-    private Rectangle[][] visualBoard;
+    private final State[][] board;
+    private final Rectangle[][] visualBoard;
     private final int size;
     private boolean[][] shape;
     private final Color color;
@@ -112,16 +112,8 @@ public class Block {
         return copy;
     }
 
-    public int getAnchorX() {
-        return anchorX;
-    }
-
     public void setAnchorX(int anchorX) {
         this.anchorX = anchorX;
-    }
-
-    public int getAnchorY() {
-        return anchorY;
     }
 
     public void setAnchorY(int anchorY) {
@@ -131,12 +123,8 @@ public class Block {
     public int getSize() {
         return size;
     }
-
-    public boolean[][] getShape() {
-        return shape;
-    }
-
-    public Color getColor() {
-        return color;
+    public BlockType getType()
+    {
+        return type;
     }
 }
