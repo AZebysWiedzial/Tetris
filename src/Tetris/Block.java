@@ -29,6 +29,8 @@ public class Block {
         if(rotatedArr == null) return;
         setBlockAreaToState(State.EMPTY);
 
+        //TODO: If cannot rotate, check if the rotated shape fits after moving it in either direction
+
         shape = rotatedArr;
         setBlockAreaToState(State.MOVING);
     }
