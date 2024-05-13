@@ -1,3 +1,5 @@
+package Tetris;
+
 import javafx.scene.paint.Color;
 
 public enum BlockType {

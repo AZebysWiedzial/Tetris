@@ -1,3 +1,5 @@
+package Tetris;
+
 public enum State {
     EMPTY,
     STATIC,

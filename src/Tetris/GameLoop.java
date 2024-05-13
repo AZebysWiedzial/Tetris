@@ -1,68 +1,56 @@
+package Tetris;
+
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.util.Arrays;
 
-public class Main extends Application {
-    public static void main(String[] args) {
-        launch(args);
-    }
+import static Tetris.Main.*;
 
-    public final int CELLS_HORIZONTAL = 10;
-    public final int CELLS_VERTICAL = 20;
-    public final int CELL_SIZE = 20;
-    public final int SCENE_WIDTH = 800;
-    public final int SCENE_HEIGHT = 600;
-    public final int STROKE_WIDTH = 2;
-    public final int FONT_SIZE = 15;
-    public final int BLOCKS_TO_PREDICT = 5;
-    public final int POINTS_PER_COMBO = 50;
-    public final int POINTS_PER_SOFT_DROP = 1;
-    public final int POINTS_PER_HARD_DROP = 2;
-    public final int[] POINTS_FOR_LINES = {100, 300, 500, 800};
+public class GameLoop {
+    public static final int CELLS_HORIZONTAL = 10;
+    public static final int CELLS_VERTICAL = 20;
+    public static final int CELL_SIZE = 20;
+    public static final int BLOCKS_TO_PREDICT = 5;
+    public static final int POINTS_PER_COMBO = 50;
+    public static final int POINTS_PER_SOFT_DROP = 1;
+    public static final int POINTS_PER_HARD_DROP = 2;
+    public static final int[] POINTS_FOR_LINES = {100, 300, 500, 800};
     public static final Color COLOR = Color.WHITE;
-    public int frameCount = 0;
-    public int score;
-    public int linesDeleted;
-    public int time;
-    public int comboCount;
-    public boolean isInGame = true;
-    public boolean hasSwitchedBlock = false;
-    public AnchorPane root;
-    public GridPane visualBoard;
-    public Block currentBlock;
-    public BlockType heldBlock;
-    public BlockType[] nextBlocks;
-    public State[][] board;
-    public Rectangle[][] rectangleBoard;
+    public static int frameCount = 0;
+    public static int score;
+    public static int linesDeleted;
+    public static int time;
+    public static int comboCount;
+    public static boolean hasSwitchedBlock = false;
+    static AnchorPane root = Main.gameLoopRoot;
+    public static GridPane visualBoard;
+    public static Block currentBlock;
+    public Block ghostBlock;
+    public static BlockType heldBlock;
+    public static BlockType[] nextBlocks;
+    public static State[][] board;
+    public static Rectangle[][] rectangleBoard;
 
-    VBox visualNextBlocks;
-    Group visualHeldBlock;
-    VBox block;
-    Text txtScoreNum = new Text("0");
-    Text txtTimeNum = new Text("0");
-    Text txtLinesNum = new Text("0");
+    static VBox visualNextBlocks;
+    static Group visualHeldBlock;
+    static Group visualGhostBlock;
+    static Text txtScoreNum = new Text("0");
+    static Text txtTimeNum = new Text("0");
+    static Text txtLinesNum = new Text("0");
+    static void setup()
+    {
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        root = new AnchorPane();
-        Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
-        scene.setFill(Color.BLACK);
 
         visualBoard = new GridPane();
         visualBoard.setLayoutX((SCENE_WIDTH - CELLS_HORIZONTAL * CELL_SIZE) / 2);
@@ -110,13 +98,8 @@ public class Main extends Application {
 
         statistics.getChildren().addAll(txtScore, txtScoreNum, txtLines, txtLinesNum, txtTime, txtTimeNum);
 
-        block = new VBox(10);
         visualHeldBlock = new Group();
-        block.getChildren().add(visualHeldBlock);
-        block.setLayoutX(110);
-        block.setLayoutY(110);
-
-
+        visualGhostBlock = new Group();
 
         Rectangle heldBlockOverlay = new Rectangle(100, 100, 100, 100);
         heldBlockOverlay.setStroke(COLOR);
@@ -145,83 +128,43 @@ public class Main extends Application {
             visualNextBlocks.getChildren().add(visualBlock);
         }
 
+        root.setBackground(new Background(new BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
+        root.getChildren().addAll(visualBoard, statistics, visualNextBlocks, txtNext, heldBlockOverlay, visualHeldBlock, txtHold, visualGhostBlock);
 
-        root.getChildren().addAll(visualBoard, statistics, visualNextBlocks, txtNext, heldBlockOverlay, visualHeldBlock, txtHold);
-
-        primaryStage.setScene(scene);
-        primaryStage.show();
 
 
         placeNewBlock();
 
-        scene.setOnKeyPressed(event -> {
-            if(event.getCode() == KeyCode.ESCAPE) isInGame = !isInGame;
+
+        Timeline gameloop = new Timeline(new KeyFrame(Duration.millis(1000/60), event -> {
             if(isInGame) {
-                switch (event.getCode()) {
-                    case LEFT:
-                        currentBlock.move(Direction.Left);
-                        break;
-                    case RIGHT:
-                        currentBlock.move(Direction.Right);
-                        break;
-                    case DOWN:
+                if (frameCount % 5 == 0) {
+                    adjustForEmptyRows();
+                }
+                if (frameCount % 60 == 0) {
+                    if (currentBlock.doesMovedBlockFit(Direction.Down)) {
                         currentBlock.move(Direction.Down);
-                        score += POINTS_PER_SOFT_DROP;
-                        updateScore();
-                        break;
-                    case SPACE:
-                        int tilesMovedDown = currentBlock.hardDrop();
-                        score += tilesMovedDown * POINTS_PER_HARD_DROP;
-                        updateScore();
+                    } else {
+                        currentBlock.setBlockAreaToState(State.STATIC);
 
                         deleteFullRows();
                         placeNewBlock();
-                        break;
-                    case R:
-                        currentBlock.rotate(true);
-                        break;
-                    case C:
-                        switchHeldBlock();
-                        break;
-                }
-            }
-        });
+                    }
 
+                    time++;
+                    updateTime();
 
-        Timeline gameloop = new Timeline(new KeyFrame(Duration.millis(1000/60), event -> {
-            if(!isInGame) return;
-            if(frameCount % 5 == 0)
-            {
-                adjustForEmptyRows();
-            }
-            if (frameCount % 60 == 0)
-            {
-                if(currentBlock.doesMovedBlockFit(Direction.Down))
-                {
-                    currentBlock.move(Direction.Down);
-                }
-                else
-                {
-                    currentBlock.setBlockAreaToState(State.STATIC);
-
-                    deleteFullRows();
-                    placeNewBlock();
+                    frameCount = 0;
                 }
 
-                time++;
-                updateTime();
-
-                frameCount = 0;
+                frameCount++;
             }
-
-            frameCount++;
         }));
         gameloop.setCycleCount(Animation.INDEFINITE);
         gameloop.play();
-
     }
 
-    public void switchHeldBlock()
+    public static void switchHeldBlock()
     {
         if(hasSwitchedBlock) return;
         currentBlock.setBlockAreaToState(State.EMPTY);
@@ -237,14 +180,35 @@ public class Main extends Application {
             placeNewBlock(heldBlock);
             heldBlock = temp;
         }
-        block.getChildren().remove(visualHeldBlock);
-        visualHeldBlock = createVisualBlock(heldBlock);
-        block.getChildren().add(visualHeldBlock);
+        adjustVisualBlock(heldBlock, visualHeldBlock);
+
+        visualHeldBlock.setLayoutX(150 - visualHeldBlock.getBoundsInLocal().getWidth() / 2);
+        visualHeldBlock.setLayoutY(150 - visualHeldBlock.getBoundsInLocal().getHeight() / 2);
 
         hasSwitchedBlock = true;
     }
+    public void adjustGhostBlock()
+    {
+        ghostBlock = new Block(currentBlock.getType(), board, rectangleBoard);
+        ghostBlock.setAnchorX(currentBlock.getAnchorX());
+
+        while(ghostBlock.doesMovedBlockFit(Direction.Down))
+        {
+            ghostBlock.move(Direction.Down);
+        }
+
+        adjustVisualBlock(ghostBlock.getType(), visualGhostBlock);
+        visualGhostBlock.setLayoutX(visualBoard.getLayoutX() + ghostBlock.getAnchorX() * CELL_SIZE);
+        visualGhostBlock.setLayoutY(visualBoard.getLayoutY() + ghostBlock.getAnchorY() * CELL_SIZE);
+        for (int i = 0; i < visualGhostBlock.getChildren().size(); i++) {
+            if(visualGhostBlock.getChildren().get(i) instanceof Rectangle)
+            {
+                ((Rectangle) visualGhostBlock.getChildren().get(i)).setFill(ghostBlock.getType().color.deriveColor(1, 0.5, 0.5, 0.1));
+            }
+        }
+    }
     //TODO: Create a ghost block that shows where current block will land after a hard drop
-    public void adjustForEmptyRows()
+    public static void adjustForEmptyRows()
     {
         for (int i = board.length - 2; i >= 0; i--) {
             if(!isWholeRowInTheSameState(i + 1, State.EMPTY)) continue;
@@ -262,7 +226,7 @@ public class Main extends Application {
         }
     }
 
-    public void deleteFullRows()
+    public static void deleteFullRows()
     {
         int fullRows = 0;
         int pointsToAdd = 0;
@@ -291,7 +255,7 @@ public class Main extends Application {
         updateDeletedLines();
     }
 
-    public void prepareBoards()
+    public static void prepareBoards()
     {
         visualBoard.getChildren().clear();
         board = new State[CELLS_VERTICAL][CELLS_HORIZONTAL];
@@ -329,7 +293,7 @@ public class Main extends Application {
         }
         System.out.println();
     }
-    public void placeNewBlock()
+    public static void placeNewBlock()
     {
         currentBlock = new Block(drawNextBlock(), board, rectangleBoard);
         currentBlock.setAnchorY(0);
@@ -341,9 +305,10 @@ public class Main extends Application {
         }
         currentBlock.setBlockAreaToState(State.MOVING);
         hasSwitchedBlock = false;
+//        adjustGhostBlock();
     }
 
-    public void placeNewBlock(BlockType type)
+    public static void placeNewBlock(BlockType type)
     {
         currentBlock = new Block(type, board, rectangleBoard);
         currentBlock.setAnchorY(0);
@@ -354,16 +319,17 @@ public class Main extends Application {
             return;
         }
         currentBlock.setBlockAreaToState(State.MOVING);
+//        adjustGhostBlock();
     }
 
-    private void gameOver()
+    private static void gameOver()
     {
         currentBlock.setBlockAreaToState(State.MOVING);
         isInGame = false;
         System.out.println("game over");
     }
 
-    public BlockType drawNextBlock()
+    public static BlockType drawNextBlock()
     {
         BlockType nextBlock = nextBlocks[0];
         visualNextBlocks.getChildren().remove(0);
@@ -382,11 +348,11 @@ public class Main extends Application {
         return nextBlock;
     }
 
-    public BlockType pickRandomBlockType()
+    public static BlockType pickRandomBlockType()
     {
         return BlockType.values()[(int)(Math.random() * BlockType.values().length)];
     }
-    public boolean isWholeRowInTheSameState(int row, State state)
+    public static boolean isWholeRowInTheSameState(int row, State state)
     {
         for (int i = 0; i < board[row].length; i++)
         {
@@ -394,7 +360,7 @@ public class Main extends Application {
         }
         return true;
     }
-    public Group createVisualBlock(BlockType blockType)
+    public static Group createVisualBlock(BlockType blockType)
     {
         Group block = new Group();
         for (int i = 0; i < blockType.size; i++) {
@@ -410,16 +376,36 @@ public class Main extends Application {
         }
         return block;
     }
-    public void updateScore()
+    public static void adjustVisualBlock(BlockType blockType, Group visualBlock)
+    {
+        visualBlock.getChildren().clear();
+        for (int i = 0; i < blockType.size; i++) {
+            for (int j = 0; j < blockType.size; j++) {
+                if(!blockType.shape[i][j]) continue;
+
+                Rectangle rectangle = new Rectangle(CELL_SIZE, CELL_SIZE, blockType.color);
+                rectangle.setX(CELL_SIZE * j);
+                rectangle.setY(CELL_SIZE * i);
+
+                visualBlock.getChildren().add(rectangle);
+            }
+        }
+
+    }
+    public static void updateScore()
     {
         txtScoreNum.setText(Integer.toString(score));
     }
-    public void updateTime()
+    public static void updateTime()
     {
         txtTimeNum.setText(Integer.toString(time));
     }
-    public void updateDeletedLines()
+    public static void updateDeletedLines()
     {
         txtLinesNum.setText(Integer.toString(linesDeleted));
+    }
+    public static AnchorPane getRoot()
+    {
+        return root;
     }
 }

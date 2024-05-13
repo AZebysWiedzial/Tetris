@@ -1,3 +1,5 @@
+package Tetris;
+
 public enum Direction {
     Up(0, -1),
     Down(0, 1),

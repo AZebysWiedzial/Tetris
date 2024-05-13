@@ -1,3 +1,5 @@
+package Tetris;
+
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
@@ -126,5 +128,13 @@ public class Block {
     public BlockType getType()
     {
         return type;
+    }
+
+    public int getAnchorX() {
+        return anchorX;
+    }
+
+    public int getAnchorY() {
+        return anchorY;
     }
 }
