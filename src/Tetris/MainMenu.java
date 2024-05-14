@@ -13,7 +13,7 @@ import javafx.scene.text.Text;
 import static Tetris.Main.*;
 
 public class MainMenu {
-    static final int TEXT_SIZE = 30;
+    static final int TEXT_SIZE = 15;
     static AnchorPane root = Main.mainMenuRoot;
     static VBox buttons;
     static Button btnPlay;
@@ -27,7 +27,7 @@ public class MainMenu {
         btnExit = new Button("EXIT");
         btnLeaderBoard = new Button("LEADERBOARDS");
 
-        btnPlay.setStyle("-fx-border-color: white; -fx-background-color: black; -fx-text-fill: white; -fx-font-family: 'Nintendo NES Font Regular'; -fx-font-size: " + TEXT_SIZE + " px;");
+        btnPlay.setStyle("-fx-border-color: white; -fx-background-color: black; -fx-text-fill: white; -fx-font-family: 'Nintendo NES Font'; -fx-font-size: " + TEXT_SIZE + " px;");
         btnExit.setStyle("-fx-border-color: white; -fx-background-color: black; -fx-text-fill: white; -fx-font-family: 'Nintendo NES Font'; -fx-font-size: " + TEXT_SIZE + "px;");
         btnLeaderBoard.setStyle("-fx-border-color: white; -fx-background-color: black; -fx-text-fill: white; -fx-font-family: 'Nintendo NES Font'; -fx-font-size: " + TEXT_SIZE + " px;");
 //        btnExit.setStyle("-fx-border-color: white; -fx-background-color: black;");
