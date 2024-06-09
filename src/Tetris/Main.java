@@ -39,20 +39,20 @@ public class Main extends Application {
             if(isInGame) {
                 switch (event.getCode()) {
                     case LEFT:
-                        currentBlock.move(Direction.Left);
-//                        adjustGhostBlock();
+                        currentBlock.move(Direction.Left, State.MOVING);
+                        adjustGhostBlock();
                         break;
                     case RIGHT:
-                        currentBlock.move(Direction.Right);
-//                        adjustGhostBlock();
+                        currentBlock.move(Direction.Right, State.MOVING);
+                        adjustGhostBlock();
                         break;
                     case DOWN:
-                        currentBlock.move(Direction.Down);
-//                        adjustGhostBlock();
-                        score += POINTS_PER_SOFT_DROP;
+                        if(currentBlock.doesMovedBlockFit(Direction.Down)) score += POINTS_PER_SOFT_DROP;
+                        currentBlock.move(Direction.Down, State.MOVING);
+                        adjustGhostBlock();
                         updateScore();
                         break;
-                    case SPACE:
+                    case E:
                         int tilesMovedDown = currentBlock.hardDrop();
                         score += tilesMovedDown * POINTS_PER_HARD_DROP;
                         updateScore();
@@ -62,6 +62,7 @@ public class Main extends Application {
                         break;
                     case R:
                         currentBlock.rotate(true);
+                        adjustGhostBlock();
                         break;
                     case C:
                         switchHeldBlock();

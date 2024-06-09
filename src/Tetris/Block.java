@@ -7,11 +7,11 @@ import javafx.scene.shape.Rectangle;
 public class Block {
 
     private final BlockType type;
-    private final State[][] board;
     private final Rectangle[][] visualBoard;
     private final int size;
     private boolean[][] shape;
-    private final Color color;
+    private Color color;
+    private final State[][] board;
     private int anchorX;
     private int anchorY;
     Block(BlockType type, State[][] board, Rectangle[][] visualBoard)
@@ -35,21 +35,22 @@ public class Block {
         setBlockAreaToState(State.MOVING);
     }
 
-    public void move(Direction direction)
+
+    public void move(Direction direction, State state)
     {
         if(!doesMovedBlockFit(direction)) return;
         setBlockAreaToState(State.EMPTY);
 
         anchorX += direction.x;
         anchorY += direction.y;
-        setBlockAreaToState(State.MOVING);
+        setBlockAreaToState(state);
     }
     public int hardDrop()
     {
         int moves = 0;
         while(doesMovedBlockFit(Direction.Down))
         {
-            move(Direction.Down);
+            move(Direction.Down, State.MOVING);
             moves++;
         }
         setBlockAreaToState(State.STATIC);
@@ -108,12 +109,39 @@ public class Block {
             }
         }
     }
+    void safeSetBlockAreaToState(State state)
+    {
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if(shape[i][j] && (board[anchorY + i][anchorX + j] == State.EMPTY || board[anchorY + i][anchorX + j] == State.GHOST)) {
+                    board[anchorY + i][anchorX + j] = state;
+                    if(state == State.EMPTY) visualBoard[anchorY + i][anchorX + j].setFill(Color.BLACK);
+                    else visualBoard[anchorY + i][anchorX + j].setFill(color);
+                }
+            }
+        }
+    }
     boolean[][] copy2dArray(boolean[][] arr)
     {
         boolean[][] copy = new boolean[arr.length][];
         for (int i = 0; i < arr.length; i++)
             copy[i] = arr[i].clone();
         return copy;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+    public void setColor(Color color){
+        this.color = color;
+    }
+
+    public boolean[][] getShape() {
+        return shape;
+    }
+
+    public void setShape(boolean[][] shape) {
+        this.shape = shape;
     }
 
     public void setAnchorX(int anchorX) {
@@ -139,4 +167,6 @@ public class Block {
     public int getAnchorY() {
         return anchorY;
     }
+
+
 }

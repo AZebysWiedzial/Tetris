@@ -6,6 +6,7 @@ import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.control.CheckBox;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -33,18 +34,19 @@ public class GameLoop {
     public static int time;
     public static int comboCount;
     public static boolean hasSwitchedBlock = false;
-    static AnchorPane root = Main.gameLoopRoot;
-    public static GridPane visualBoard;
+    public static boolean showGhostBlock = false;
     public static Block currentBlock;
-    public Block ghostBlock;
+    public static Block ghostBlock;
     public static BlockType heldBlock;
     public static BlockType[] nextBlocks;
     public static State[][] board;
     public static Rectangle[][] rectangleBoard;
 
+    static AnchorPane root = Main.gameLoopRoot;
+    public static GridPane visualBoard;
     static VBox visualNextBlocks;
     static Group visualHeldBlock;
-    static Group visualGhostBlock;
+    static CheckBox cbShowGhostBlock;
     static Text txtScoreNum = new Text("0");
     static Text txtTimeNum = new Text("0");
     static Text txtLinesNum = new Text("0");
@@ -80,12 +82,15 @@ public class GameLoop {
         Text txtScore = new Text("SCORE:");
         txtScore.setFont(Font.font(FONT_SIZE));
         txtScore.setFill(COLOR);
+
         Text txtTime = new Text("TIME:");
         txtTime.setFont(Font.font(FONT_SIZE));
         txtTime.setFill(COLOR);
+
         Text txtLines = new Text("LINES:");
         txtLines.setFont(Font.font(FONT_SIZE));
         txtLines.setFill(COLOR);
+
 
         txtScoreNum.setFont(Font.font(FONT_SIZE));
         txtScoreNum.setFill(COLOR);
@@ -99,7 +104,7 @@ public class GameLoop {
         statistics.getChildren().addAll(txtScore, txtScoreNum, txtLines, txtLinesNum, txtTime, txtTimeNum);
 
         visualHeldBlock = new Group();
-        visualGhostBlock = new Group();
+//        visualGhostBlock = new Group();
 
         Rectangle heldBlockOverlay = new Rectangle(100, 100, 100, 100);
         heldBlockOverlay.setStroke(COLOR);
@@ -123,13 +128,19 @@ public class GameLoop {
         txtNext.setFont(Font.font(FONT_SIZE * 1.5));
         txtNext.setFill(COLOR);
 
+        cbShowGhostBlock = new CheckBox("SHOW GHOST BLOCK");
+        cbShowGhostBlock.setOnAction(event -> {
+            showGhostBlock = !showGhostBlock;
+            adjustGhostBlock();
+        });
+
         for (int i = 0; i < BLOCKS_TO_PREDICT; i++) {
             Group visualBlock = createVisualBlock(nextBlocks[i]);
             visualNextBlocks.getChildren().add(visualBlock);
         }
 
         root.setBackground(new Background(new BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY)));
-        root.getChildren().addAll(visualBoard, statistics, visualNextBlocks, txtNext, heldBlockOverlay, visualHeldBlock, txtHold, visualGhostBlock);
+        root.getChildren().addAll(visualBoard, statistics, visualNextBlocks, txtNext, heldBlockOverlay, visualHeldBlock, txtHold, cbShowGhostBlock);
 
 
 
@@ -140,10 +151,11 @@ public class GameLoop {
             if(isInGame) {
                 if (frameCount % 5 == 0) {
                     adjustForEmptyRows();
+                    printBoard();
                 }
                 if (frameCount % 60 == 0) {
                     if (currentBlock.doesMovedBlockFit(Direction.Down)) {
-                        currentBlock.move(Direction.Down);
+                        currentBlock.move(Direction.Down, State.MOVING);
                     } else {
                         currentBlock.setBlockAreaToState(State.STATIC);
 
@@ -187,31 +199,28 @@ public class GameLoop {
 
         hasSwitchedBlock = true;
     }
-    public void adjustGhostBlock()
+    public static void adjustGhostBlock()
     {
+        if(ghostBlock != null) ghostBlock.safeSetBlockAreaToState(State.EMPTY);
+        if(!showGhostBlock) return;
         ghostBlock = new Block(currentBlock.getType(), board, rectangleBoard);
         ghostBlock.setAnchorX(currentBlock.getAnchorX());
 
+        ghostBlock.setShape(currentBlock.getShape());
+
+        Color currColor = ghostBlock.getColor();
+        ghostBlock.setColor(new Color(currColor.getRed(), currColor.getGreen(), currColor.getBlue(), 0.5));
+
         while(ghostBlock.doesMovedBlockFit(Direction.Down))
         {
-            ghostBlock.move(Direction.Down);
+            ghostBlock.move(Direction.Down, State.GHOST);
         }
-
-        adjustVisualBlock(ghostBlock.getType(), visualGhostBlock);
-        visualGhostBlock.setLayoutX(visualBoard.getLayoutX() + ghostBlock.getAnchorX() * CELL_SIZE);
-        visualGhostBlock.setLayoutY(visualBoard.getLayoutY() + ghostBlock.getAnchorY() * CELL_SIZE);
-        for (int i = 0; i < visualGhostBlock.getChildren().size(); i++) {
-            if(visualGhostBlock.getChildren().get(i) instanceof Rectangle)
-            {
-                ((Rectangle) visualGhostBlock.getChildren().get(i)).setFill(ghostBlock.getType().color.deriveColor(1, 0.5, 0.5, 0.1));
-            }
-        }
+        currentBlock.setBlockAreaToState(State.MOVING);
     }
-    //TODO: Create a ghost block that shows where current block will land after a hard drop
     public static void adjustForEmptyRows()
     {
         for (int i = board.length - 2; i >= 0; i--) {
-            if(!isWholeRowInTheSameState(i + 1, State.EMPTY)) continue;
+            if(!isRowEmpty(i+1)) continue;
 
             for (int j = 0; j < board[i].length; j++)
             {
@@ -270,7 +279,7 @@ public class GameLoop {
             }
         }
     }
-    public void printBoard()
+    public static void printBoard()
     {
         for (int i = 0; i < board.length; i++) {
             System.out.print("[");
@@ -286,6 +295,8 @@ public class GameLoop {
                     case STATIC:
                         System.out.print(2);
                         break;
+                    case GHOST:
+                        System.out.print(3);
                 }
                 if(j < board[i].length - 1) System.out.print(", ");
             }
@@ -303,9 +314,9 @@ public class GameLoop {
             gameOver();
             return;
         }
+        adjustGhostBlock();
         currentBlock.setBlockAreaToState(State.MOVING);
         hasSwitchedBlock = false;
-//        adjustGhostBlock();
     }
 
     public static void placeNewBlock(BlockType type)
@@ -318,8 +329,8 @@ public class GameLoop {
             gameOver();
             return;
         }
+        adjustGhostBlock();
         currentBlock.setBlockAreaToState(State.MOVING);
-//        adjustGhostBlock();
     }
 
     private static void gameOver()
@@ -357,6 +368,14 @@ public class GameLoop {
         for (int i = 0; i < board[row].length; i++)
         {
             if(board[row][i] != state) return false;
+        }
+        return true;
+    }
+    public static boolean isRowEmpty(int row)
+    {
+        for (int i = 0; i < board[row].length; i++)
+        {
+            if(board[row][i] != State.EMPTY && board[row][i] != State.GHOST) return false;
         }
         return true;
     }

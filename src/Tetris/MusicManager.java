@@ -12,12 +12,9 @@ public class MusicManager {
     {
         Media media = new Media(Paths.get(url).toUri().toString());
         mediaPlayer = new MediaPlayer(media);
-        mediaPlayer.setOnEndOfMedia(new Runnable() {
-            @Override
-            public void run() {
-                mediaPlayer.seek(Duration.ZERO);
-                mediaPlayer.play();
-            }
+        mediaPlayer.setOnEndOfMedia(() -> {
+            mediaPlayer.seek(Duration.ZERO);
+            mediaPlayer.play();
         });
         mediaPlayer.play();
     }
